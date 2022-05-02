@@ -193,8 +193,12 @@ class Network():
             latency += sender_mi.get("avg latency")
             loss += sender_mi.get("loss ratio")
         def fair(p,b):
-            return np.dot(p, b) / np.linalg.norm(p)*np.linalg.norm(b)
+            # print(np.linalg.norm(b))
+            return np.dot(p, b) / (np.linalg.norm(p)*np.linalg.norm(b)+1e-10)
         fair_loss=(fair(self.payment_weight,bandwidth)-1)**2
+        # print("bandwidth", bandwidth)
+        # print("latency", latency)
+        # print("fair_loss", fair_loss)
 
         bw_cutoff = self.links[0].bw * 0.8
         lat_cutoff = 2.0 * self.links[0].dl * 1.5
@@ -208,9 +212,9 @@ class Network():
         # Very high thpt
         # reward = (10.0 * throughput / (8 * BYTES_PER_PACKET) - 1e3 * latency - 2e3 * loss)
         # reward = (8.0 * throughput / (8 * BYTES_PER_PACKET) - 1e3 * (latency-MAX_LATENCY) - 2e3 * (loss - MAX_LOSS))
-        reward = fair_loss+(8.0 * throughput / (8 * BYTES_PER_PACKET) - 1e3 * (latency - MAX_LATENCY) - 2e3 * (loss - MAX_LOSS))
+        reward = (8.0 * throughput / (8 * BYTES_PER_PACKET) - 1e3 * (latency - MAX_LATENCY) - 2e3 * (loss - MAX_LOSS)) - 2e3 * fair_loss
 
-        print("fair_loss",fair_loss)
+
         # High thpt
         #reward = REWARD_SCALE * (5.0 * throughput / RATE_OBS_SCALE - 1e3 * latency / LAT_OBS_SCALE - 2e3 * loss)
         
@@ -220,7 +224,7 @@ class Network():
         #print("Reward = %f, thpt = %f, lat = %f, loss = %f" % (reward, throughput, latency, loss))
         
         #reward = (throughput / RATE_OBS_SCALE) * np.exp(-1 * (LATENCY_PENALTY * latency / LAT_OBS_SCALE + LOSS_PENALTY * loss))
-        return reward * REWARD_SCALE
+        return reward * REWARD_SCALE,fair_loss
 
 class Sender():
     
@@ -439,7 +443,7 @@ class SimulatedNetworkEnv(gym.Env):
             if USE_CWND:
                 self.senders[i].apply_cwnd_delta(action[1])
         #print("Running for %fs" % self.run_dur)
-        reward = self.net.run_for_dur(self.run_dur)
+        reward,fair_loss = self.net.run_for_dur(self.run_dur)
         for sender in self.senders:
             sender.record_run()
         self.steps_taken += 1
@@ -449,6 +453,7 @@ class SimulatedNetworkEnv(gym.Env):
         event["Name"] = "Step"
         event["Time"] = self.steps_taken
         event["Reward"] = reward
+        event["Fairness"] = fair_loss
         #event["Target Rate"] = sender_mi.target_rate
         event["Send Rate"] = sender_mi.get("send rate")
         event["Throughput"] = sender_mi.get("recv rate")

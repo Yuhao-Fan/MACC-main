@@ -59,7 +59,6 @@ print("gamma = %f" % gamma)
 policy_kwargs = dict(net_arch=[{"pi":arch, "vf":arch}])
 model = PPO("MlpPolicy",env,policy_kwargs=policy_kwargs, verbose=1, n_steps=8192, batch_size=2048, gamma=gamma,use_sde=False)
 # model = PPO(MyMlpPolicy, env, verbose=1, schedule ='constant', timesteps_per_actorbatch=8192, optim_batchsize=2048, gamma=gamma)
-# for i in range(0, 1):
 for i in range(0, 6):
     # with model.graph.as_default():
         # saver = tf.train.Saver()
