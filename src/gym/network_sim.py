@@ -192,6 +192,12 @@ class Network():
             throughput += sender_mi.get("recv rate")
             latency += sender_mi.get("avg latency")
             loss += sender_mi.get("loss ratio")
+        def NormalizeData(data):
+            # data = np.array(data)
+            return data/(sum(data)+1e-10)
+
+        bandwidth=NormalizeData(bandwidth)
+        # print(bandwidth)
         def fair(p,b):
             # print(np.linalg.norm(b))
             return np.dot(p, b) / (np.linalg.norm(p)*np.linalg.norm(b)+1e-10)
