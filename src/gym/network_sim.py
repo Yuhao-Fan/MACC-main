@@ -218,7 +218,7 @@ class Network():
         # Very high thpt
         # reward = (10.0 * throughput / (8 * BYTES_PER_PACKET) - 1e3 * latency - 2e3 * loss)
         # reward = (8.0 * throughput / (8 * BYTES_PER_PACKET) - 1e3 * (latency-MAX_LATENCY) - 2e3 * (loss - MAX_LOSS))
-        reward = (8.0 * throughput / (8 * BYTES_PER_PACKET) - 1e3 * (latency - MAX_LATENCY) - 2e3 * (loss - MAX_LOSS)) - 2e3 * fair_loss
+        reward = (8.0 * throughput / (8 * BYTES_PER_PACKET) - 1e3 * (latency - MAX_LATENCY) - 2e3 * (loss - MAX_LOSS)) - 1e2 * fair_loss
 
 
         # High thpt
@@ -230,7 +230,7 @@ class Network():
         #print("Reward = %f, thpt = %f, lat = %f, loss = %f" % (reward, throughput, latency, loss))
         
         #reward = (throughput / RATE_OBS_SCALE) * np.exp(-1 * (LATENCY_PENALTY * latency / LAT_OBS_SCALE + LOSS_PENALTY * loss))
-        return reward * REWARD_SCALE,fair_loss
+        return reward * REWARD_SCALE,fair_loss,throughput,latency,loss
 
 class Sender():
     
@@ -449,30 +449,38 @@ class SimulatedNetworkEnv(gym.Env):
             if USE_CWND:
                 self.senders[i].apply_cwnd_delta(action[1])
         #print("Running for %fs" % self.run_dur)
-        reward,fair_loss = self.net.run_for_dur(self.run_dur)
+        reward,fair_loss,throughput,latency,loss = self.net.run_for_dur(self.run_dur)
         for sender in self.senders:
             sender.record_run()
         self.steps_taken += 1
         sender_obs = self._get_all_sender_obs()
-        sender_mi = self.senders[0].get_run_data()
         event = {}
         event["Name"] = "Step"
         event["Time"] = self.steps_taken
         event["Reward"] = reward
         event["Fairness"] = fair_loss
-        #event["Target Rate"] = sender_mi.target_rate
-        event["Send Rate"] = sender_mi.get("send rate")
-        event["Throughput"] = sender_mi.get("recv rate")
-        event["Latency"] = sender_mi.get("avg latency")
-        event["Loss Rate"] = sender_mi.get("loss ratio")
-        event["Latency Inflation"] = sender_mi.get("sent latency inflation")
-        event["Latency Ratio"] = sender_mi.get("latency ratio")
-        event["Send Ratio"] = sender_mi.get("send ratio")
+        event["SumThroughput"] = throughput
+        event["SumLatency"] = latency
+        event["SumLoss"] = loss
+        event["Other"]=[]
+        for i in range(self.sender_num):
+            sender_mi = self.senders[i].get_run_data()
+            event["Other"].append({})
+            events=event["Other"]
+            #event["Target Rate"] = sender_mi.target_rate
+            events[i]["Send Rate"] = sender_mi.get("send rate")
+            events[i]["Throughput"] = sender_mi.get("recv rate")
+            events[i]["Latency"] = sender_mi.get("avg latency")
+            events[i]["Loss Rate"] = sender_mi.get("loss ratio")
+            events[i]["Latency Inflation"] = sender_mi.get("sent latency inflation")
+            events[i]["Latency Ratio"] = sender_mi.get("latency ratio")
+            events[i]["Send Ratio"] = sender_mi.get("send ratio")
         #event["Cwnd"] = sender_mi.cwnd
         #event["Cwnd Used"] = sender_mi.cwnd_used
         self.event_record["Events"].append(event)
-        if event["Latency"] > 0.0:
-            self.run_dur = 0.5 * sender_mi.get("avg latency")
+        if event["SumLatency"] > 0.0:
+            self.run_dur = 0.5 * event["SumLatency"]/self.sender_num
+            # self.run_dur = 0.5 * sender_mi.get("avg latency")
         #print("Sender obs: %s" % sender_obs)
 
         should_stop = False

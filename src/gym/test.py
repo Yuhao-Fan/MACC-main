@@ -1,6 +1,5 @@
 import numpy as np
 
-
 def fair(p, b):
     return np.dot(p, b) / (np.linalg.norm(p) * np.linalg.norm(b))
 
