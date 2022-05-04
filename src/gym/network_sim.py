@@ -183,9 +183,9 @@ class Network():
 
         # sender_mi = self.senders[0].get_run_data()  # only compute 0
         bandwidth=np.zeros(self.sender_num)
-        throughput=0
-        latency=0
-        loss=0
+        throughput=0.0
+        latency=0.0
+        loss=0.0
         for i in range(self.sender_num):
             sender_mi = self.senders[i].get_run_data()
             bandwidth[i] = sender_mi.get("send rate")
@@ -218,7 +218,7 @@ class Network():
         # Very high thpt
         # reward = (10.0 * throughput / (8 * BYTES_PER_PACKET) - 1e3 * latency - 2e3 * loss)
         # reward = (8.0 * throughput / (8 * BYTES_PER_PACKET) - 1e3 * (latency-MAX_LATENCY) - 2e3 * (loss - MAX_LOSS))
-        reward = (8.0 * throughput / (8 * BYTES_PER_PACKET) - 1e3 * (latency - MAX_LATENCY) - 2e3 * (loss - MAX_LOSS)) - 1e2 * fair_loss
+        reward = (8.0 * throughput / (8 * BYTES_PER_PACKET) - 1e3 * (latency - MAX_LATENCY) - 2e3 * (loss - MAX_LOSS)) - 1e1 * fair_loss
 
 
         # High thpt
