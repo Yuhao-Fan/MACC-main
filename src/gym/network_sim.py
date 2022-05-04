@@ -395,7 +395,7 @@ class SimulatedNetworkEnv(gym.Env):
         self.links = None
         self.senders = None
 
-
+        self.keys=2
         self.sender_num = 2
         self.payment_weight=None
         self.min_price, self.max_price = (50, 100)
@@ -419,10 +419,18 @@ class SimulatedNetworkEnv(gym.Env):
         use_only_scale_free = True
         single_obs_min_vec = sender_obs.get_min_obs_vector(self.features)
         single_obs_max_vec = sender_obs.get_max_obs_vector(self.features)
-        self.observation_space = spaces.Box(np.tile(single_obs_min_vec, self.history_len),
+
+
+        # self.observation_space = spaces.Box(np.tile(single_obs_min_vec, self.history_len),
+        #                                     np.tile(single_obs_max_vec, self.history_len),
+        #                                     dtype=np.float32)
+        boxes= {}
+        for i in range(self.sender_num):
+            boxes[str(i)]=spaces.Box(np.tile(single_obs_min_vec, self.history_len),
                                             np.tile(single_obs_max_vec, self.history_len),
                                             dtype=np.float32)
 
+        self.observation_space = spaces.Dict(boxes)
         self.reward_sum = 0.0
         self.reward_ewma = 0.0
 
@@ -434,15 +442,18 @@ class SimulatedNetworkEnv(gym.Env):
         return [seed]
 
     def _get_all_sender_obs(self):
-        sender_obs = self.senders[0].get_obs()
-        sender_obs = np.array(sender_obs).reshape(-1,)
-        #print(sender_obs)
+        sender_obs= {}
+        for i in range(self.sender_num):
+            sender_obs[str(i)]=self.senders[i].get_obs()
+
+        # sender_obs = np.array(sender_obs)
+        # print("sender_obs",sender_obs)
         return sender_obs
 
     def step(self, actions):
         #print("Actions: %s" % str(actions))
         #print(actions)
-        for i in range(0, 1):#len(actions)):
+        for i in range(len(actions)):#len(actions)):
             #print("Updating rate for sender %d" % i)
             action = actions
             self.senders[i].apply_rate_delta(action[0])
